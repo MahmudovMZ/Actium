@@ -151,11 +151,11 @@ func Run() {
 						deadline = strings.TrimSpace(deadline)
 						t.AddTask(title, description, status, deadline, creatorId)
 
-						err := repository.CreateTask(title, description, status, creatorId, deadline)
+						id, err := repository.CreateTask(title, description, status, creatorId, deadline)
 						if err != nil {
 							log.Fatal(err)
 						}
-						fmt.Printf("\nTask has been created.\nTitle: %s\nDescription: %s.\nStatus: %s.\nDeadline: %s\n", title, description, status, deadline)
+						fmt.Printf("\nTask has been created.\nID: %s\nTitle: %s\nDescription: %s.\nStatus: %s.\nDeadline: %s\n", id, title, description, status, deadline)
 
 					case 2: // Show all tasks
 						fmt.Printf("Loading all tasks %s\n", userN)

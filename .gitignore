@@ -1,2 +1,3 @@
 # Ignore configs
 internal/config/config.json
+.env

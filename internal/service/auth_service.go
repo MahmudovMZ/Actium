@@ -25,9 +25,8 @@ func SignUp(userN, userP string) {
 	fmt.Printf("\nAccount with username %s has been created\n\n", userN)
 }
 
-// Login fetches user by username and verifies password hash
 func Login(userN, userP string) (int, bool) {
-	// Fetch user(s) from database
+	// Fetch user from database
 	users, err := repository.GetByUsersName(userN)
 	if err != nil {
 		fmt.Printf("Error retrieving users: %v\n", err)

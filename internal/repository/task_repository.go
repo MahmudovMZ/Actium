@@ -9,14 +9,20 @@ import (
 
 var tasks []models.Task
 
-func CreateTask(title, description, status string, creatorId int, deadline string) error {
+func CreateTask(title, description, status string, creatorId int, deadline string) (int, error) {
+	var taskID int
+	query := `
+		INSERT INTO tasks (title, description, status, creator_id, deadline)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id;
+	`
 
-	_, err := db.GetDB().Exec(
-		"INSERT INTO tasks(title,description,status,creator_id,deadline) VALUES($1,$2,$3,$4,$5)",
-		title, description, status, creatorId, deadline,
-	)
+	err := db.GetDB().QueryRow(query, title, description, status, creatorId, deadline).Scan(&taskID)
+	if err != nil {
+		return 0, err
+	}
 
-	return err
+	return taskID, nil
 }
 
 func GetTasksByCreator(creatorId int) ([]models.Task, error) {
@@ -65,10 +71,17 @@ func ShowCompletedTasks(creatorId int) ([]models.Task, error) {
 	return tasks, nil
 }
 
-func UpdateStatus(taskId int, newStatus string, creatorId int) {
+func UpdateStatus(taskId int, newStatus string, creatorId int) error {
+	res, err := db.GetDB().Exec("UPDATE tasks SET status = $2 WHERE creator_id = $3 AND id = $1", taskId, newStatus, creatorId)
+	if err != nil {
+		return err
+	}
 
-	db.GetDB().Exec("UPDATE tasks SET status = $1 WHERE creator_id = $2 AND id = $3", newStatus, creatorId, taskId)
-	fmt.Printf("Task's status has been successfully changed to '%s'", newStatus)
+	rows, _ := res.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("task not found or not yours")
+	}
+	return nil
 
 }
 
@@ -95,8 +108,18 @@ func LoadAllTasks(creatorId int) ([]models.Task, error) {
 	}
 	return tasks, nil
 }
-func DeleteTask(taskId, creatorId int) {
-	db.GetDB().Exec("DELETE FROM tasks WHERE id = $1 AND creator_id = $2", taskId, creatorId)
+func DeleteTask(taskId, creatorId int) error {
+
+	res, err := db.GetDB().Exec("DELETE FROM tasks WHERE id = $1 AND creator_id = $2", taskId, creatorId)
+	if err != nil {
+		return err
+	}
+	rows, _ := res.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("task not found or not yours")
+	}
+	return nil
+
 }
 
 func SearchTask_byId(creatorId, taskID int) ([]models.Task, error) {

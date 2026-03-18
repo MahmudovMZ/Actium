@@ -3,10 +3,15 @@ package repository
 import (
 	db "Actium_Todo/internal/database"
 	"Actium_Todo/internal/models"
+	"database/sql"
+	"errors"
 )
 
 func GetByUsersName(username string) ([]models.User, error) {
-	rows, err := db.GetDB().Query("SELECT * FROM users WHERE user_name = $1", username)
+	rows, err := db.GetDB().Query(
+		`SELECT id, user_name, password, joined_at FROM users WHERE user_name = $1`,
+		username,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -16,11 +21,41 @@ func GetByUsersName(username string) ([]models.User, error) {
 
 	for rows.Next() {
 		var u models.User
-		rows.Scan(&u.ID, &u.UserName, &u.Password, &u.CreatedAt)
+		err := rows.Scan(
+			&u.ID,
+			&u.UserName,
+			&u.Password,
+			&u.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
 		users = append(users, u)
 	}
 
 	return users, nil
+}
+
+func GetByID(id int) (models.User, error) {
+	var user models.User
+
+	query := `SELECT id, user_name, password, joined_at FROM users WHERE id = $1`
+
+	err := db.GetDB().QueryRow(query, id).Scan(
+		&user.ID,
+		&user.UserName,
+		&user.Password,
+		&user.CreatedAt,
+	)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return user, errors.New("user not found")
+		}
+		return user, err
+	}
+
+	return user, nil
 }
 
 func SignUp_user(username, password string) error {
@@ -28,7 +63,7 @@ func SignUp_user(username, password string) error {
 
 	return err
 }
-func DeleteMyAccount(userID int) error {
+func DeleteMyAccount(userID int64) error {
 	_, err := db.GetDB().Exec("DELETE FROM users WHERE id = $1", userID)
 
 	return err
