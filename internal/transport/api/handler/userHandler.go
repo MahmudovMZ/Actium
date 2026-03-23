@@ -52,6 +52,13 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "could not create token", http.StatusInternalServerError)
 		return
 	}
+
+	err = repository.SaveToken(signedToken, userID) //saving token to the DB
+	if err != nil {
+		http.Error(w, "failed to save token", http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
 		"message": "Successful login",
@@ -78,6 +85,16 @@ func ValidateMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
+		isLoggedOut, err := repository.IsTokenLoggedOut(key)
+		if err != nil {
+			http.Error(w, "invalid token", http.StatusUnauthorized)
+			return
+		}
+		if isLoggedOut {
+			http.Error(w, "token revoked", http.StatusUnauthorized)
+			return
+		}
+
 		claims := &models.Claims{}
 		token, err := jwt.ParseWithClaims(key, claims, func(t *jwt.Token) (interface{}, error) {
 			return models.Secret, nil
@@ -87,11 +104,13 @@ func ValidateMiddleware(next http.Handler) http.Handler {
 			http.Error(w, "Invalid token", http.StatusUnauthorized)
 			return
 		}
+
 		user, err := repository.GetByID(claims.UserId)
 		if err != nil {
 			http.Error(w, "Account not found", http.StatusNotFound)
 			return
 		}
+
 		ctx := context.WithValue(r.Context(), "user", user)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -110,7 +129,27 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to delete user", http.StatusInternalServerError)
 		return
 	}
-
+	err = repository.DeleteAllTasksFromUser(user.UserName)
+	if err != nil {
+		http.Error(w, "Something went wrong", http.StatusBadRequest)
+		return
+	}
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("account deleted successfully"))
+}
+
+func LogoutHandler(w http.ResponseWriter, r *http.Request) {
+	token := r.Header.Get("token")
+	if token == "" {
+		http.Error(w, "no token", http.StatusBadRequest)
+		return
+	}
+
+	err := repository.Logout(token)
+	if err != nil {
+		http.Error(w, "failed to logout", http.StatusInternalServerError)
+		return
+	}
+
+	w.Write([]byte("logged out"))
 }

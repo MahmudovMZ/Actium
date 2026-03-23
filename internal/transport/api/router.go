@@ -15,6 +15,7 @@ func InitRouter() error {
 	user := r.PathPrefix("/user").Subrouter() //Using middleware to prevent unauthorized users from the service
 	user.Use(handler.ValidateMiddleware)
 	user.HandleFunc("/me", handler.MeHandler).Methods("GET")
+	user.HandleFunc("/logout", handler.LogoutHandler).Methods("POST")
 	user.HandleFunc("/deleteMy_account", handler.DeleteUser).Methods("DELETE")
 
 	task := r.PathPrefix("/task").Subrouter()
@@ -24,7 +25,6 @@ func InitRouter() error {
 	task.HandleFunc("/update", handler.UpdateTaskStatus).Methods("PUT")
 	task.HandleFunc("/delete", handler.DeletTask).Methods("DELETE")
 
-	// user.HandleFunc("/logout", handler.Logout).Methods("POST").Headers("Content-Type", "application/json")
 	return http.ListenAndServe(":8000", r)
 
 }

@@ -86,3 +86,35 @@ func DeleteAllTasksFromUser(userN string) error {
 	_, err = db.GetDB().Exec("DELETE FROM tasks WHERE user_id = $1", userID)
 	return err
 }
+
+func SaveToken(token string, userID int) error {
+	_, err := db.GetDB().Exec(
+		"INSERT INTO blacklisted_token (jwt, user_id, login) VALUES ($1, $2, NOW())",
+		token,
+		userID,
+	)
+	return err
+}
+
+func Logout(token string) error {
+	_, err := db.GetDB().Exec(
+		"UPDATE blacklisted_token SET logedout = NOW() WHERE jwt = $1",
+		token,
+	)
+	return err
+}
+
+func IsTokenLoggedOut(token string) (bool, error) {
+	var loggedOutAt sql.NullTime
+
+	err := db.GetDB().QueryRow(
+		"SELECT logedout FROM blacklisted_token WHERE jwt = $1",
+		token,
+	).Scan(&loggedOutAt)
+
+	if err != nil {
+		return false, err
+	}
+
+	return loggedOutAt.Valid, nil
+}
