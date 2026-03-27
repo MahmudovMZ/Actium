@@ -2,7 +2,10 @@ package config
 
 import (
 	"encoding/json"
+	"log"
 	"os"
+
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -29,4 +32,15 @@ func ReadConfig(path string) error {
 
 func GetConf() *Config {
 	return &conf
+}
+
+var JWTSecret []byte
+
+func LoadEnv() {
+	// Загружаем переменные из .env
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found, using system environment variables")
+	}
+
+	JWTSecret = []byte(os.Getenv("JWT_SECRET"))
 }
